@@ -1,0 +1,154 @@
+module 8 bit shift reg + mux 4:1
+
+module top_module ( 
+    input clk, 
+    input [7:0] d, 
+    input [1:0] sel, 
+    output [7:0] q 
+);
+
+    // Internal wires to connect the D flip-flops
+    wire [7:0] a, b, c;
+
+    // Instantiate D flip-flop modules
+    my_dff8 d1 (clk, d, a);
+    my_dff8 d2 (clk, a, b);
+    my_dff8 d3 (clk, b, c);
+
+    // Output selection using a case statement
+    always @* begin
+        case (sel)
+            2'b00: q = d;
+            2'b01: q = a;
+            2'b10: q = b;
+            2'b11: q = c;
+        endcase
+    end
+
+endmodule
+
+
+
+32 bit adder 
+
+module top_module(
+    input [31:0] a,
+    input [31:0] b,
+    output [31:0] sum
+);
+
+    wire [15:0] sum1; // Lower 16 bits
+    wire [15:0] sum2; // Upper 16 bits
+    wire cout; // Carry-out from the first adder
+
+    // Instantiate the first add16 module for the lower 16 bits
+    add16 d1 (a[15:0], b[15:0], 1'b0, sum1, cout);
+
+    // Instantiate the second add16 module for the upper 16 bits
+    add16 d2 (a[31:16], b[31:16], cout, sum2, 1'b0); // Ignore carry-in
+
+    // Concatenate the sums
+    assign sum = {sum2, sum1};
+
+endmodule
+
+3 modules combined
+
+module top_module (
+    input [31:0] a,
+    input [31:0] b,
+    output [31:0] sum
+);//
+    
+    wire [15:0] sum2; // Upper 16 bits
+    wire [15:0] sum_internal;
+    wire [15:0] carry;
+    
+	add1 d0 (a[0], b[0], 1'b0, sum_internal[0], carry[0]);
+    add1 d1 (a[1], b[1], carry[0], sum_internal[1], carry[1]);
+    add1 d2 (a[2], b[2], carry[1], sum_internal[2], carry[2]);
+    add1 d3 (a[3], b[3], carry[2], sum_internal[3], carry[3]);
+    add1 d4 (a[4], b[4], carry[3], sum_internal[4], carry[4]);
+    add1 d5 (a[5], b[5], carry[4], sum_internal[5], carry[5]);
+    add1 d6 (a[6], b[6], carry[5], sum_internal[6], carry[6]);
+    add1 d7 (a[7], b[7], carry[6], sum_internal[7], carry[7]);
+    add1 d8 (a[8], b[8], carry[7], sum_internal[8], carry[8]);
+    add1 d9 (a[9], b[9], carry[8], sum_internal[9], carry[9]);
+    add1 d10(a[10], b[10], carry[9], sum_internal[10], carry[10]);
+    add1 d11(a[11], b[11], carry[10], sum_internal[11], carry[11]);
+    add1 d12(a[12], b[12], carry[11], sum_internal[12], carry[12]);
+    add1 d13(a[13], b[13], carry[12], sum_internal[13], carry[13]);
+    add1 d14(a[14], b[14], carry[13], sum_internal[14], carry[14]);
+    add1 d15(a[15], b[15], carry[14], sum_internal[15], carry[15]);
+        
+    add16 b16(a[31:16], b[31:16], carry[15],sum2,1'b0);
+    
+    assign sum = {sum2,sum_internal};
+endmodule
+
+module add1 ( input a, input b, input cin,   output sum, output cout );
+assign sum = a ^ b ^ cin; // XOR of inputs gives the sum
+assign cout = (a & b) | (a & cin) | (b & cin); // Carry-out logic
+// Full adder module here
+
+endmodule
+
+
+parralel calculatiuons adder 
+module top_module(
+    input [31:0] a,
+    input [31:0] b,
+    output [31:0] sum
+);
+    wire [15:0] sum1;
+    wire [15:0] sum2;
+    wire [15:0] sum3;
+    wire [15:0] sumt;
+    wire cout;
+    add16 s1 ( a[15:0],b[15:0], 1'b0 , sum1 , cout);
+    add16 s2 ( a[31:16],b[31:16], 1'b0 , sum2 , 1'b0);
+    add16 s3 ( a[31:16],b[31:16], 1'b1 , sum3 , 1'b0);
+     always @* begin
+         case (cout)
+            1'b0: sumt = sum2;
+            1'b01: sumt = sum3;
+        endcase
+     end
+         assign sum = {sumt,sum1};
+
+
+endmodule
+
+
+adder substarctor 
+
+module top_module (
+    input [31:0] a,
+    input [31:0] b,
+    input sub,
+    output [31:0] sum
+);
+
+    // Internal wires
+    wire [31:0] tsub;
+    wire [31:0] xin;
+    wire [15:0] sum1;
+    wire [15:0] sum2;
+    wire cout;
+
+    // Duplicate the 'sub' input to match the width of 'b'
+    assign tsub = {32{sub}};
+
+    // Compute xin using bitwise XOR between tsub and b
+    assign xin = tsub ^ b;
+
+    // Instantiate the first 16-bit adder
+    add16 u1 (a[15:0], xin[15:0], sub, sum1, cout);
+
+    // Instantiate the second 16-bit adder
+    add16 u2 (a[31:16], xin[31:16], cout, sum2, 1'b0);
+
+    // Concatenate the sum2 and sum1 vectors to form the final sum
+    assign sum = {sum2, sum1};
+
+endmodule
